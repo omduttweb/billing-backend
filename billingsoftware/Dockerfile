@@ -7,6 +7,7 @@ WORKDIR /app
 # Copy Maven wrapper and pom.xml
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
+RUN chmod +x mvnw
 RUN ./mvnw dependency:resolve
 
 # Copy source code

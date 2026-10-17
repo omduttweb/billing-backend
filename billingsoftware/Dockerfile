@@ -5,9 +5,9 @@ FROM eclipse-temurin:17-jdk-alpine
 WORKDIR /app
 
 # Copy Maven wrapper and pom.xml
-mvnw pom.xml ./
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
+RUN ./mvnw dependency:resolve
 
 # Copy source code
 COPY src src

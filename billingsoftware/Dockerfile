@@ -17,4 +17,4 @@ COPY src src
 RUN ./mvnw clean package -DskipTests
 
 # Run the jar file
-CMD ["java", "-jar", "target/*.jar"]
+CMD java -jar target/*.jar

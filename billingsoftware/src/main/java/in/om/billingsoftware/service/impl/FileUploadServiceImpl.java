@@ -1,3 +1,4 @@
+
 package in.om.billingsoftware.service.impl;
 
 import in.om.billingsoftware.service.FileUploadService;
@@ -11,7 +12,6 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -22,40 +22,67 @@ public class FileUploadServiceImpl implements FileUploadService {
 
     @Value("${aws.bucket.name}")
     private String bucketName;
-    public final S3Client s3Client;
+
+    @Value("${aws.region}")
+    private String region;
+
+    private final S3Client s3Client;
 
     @Override
     public String uploadFile(MultipartFile file) {
-        String filenameExtension = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".")+1);
-        String key = UUID.randomUUID().toString()+"."+filenameExtension;
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "File is empty"
+            );
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+
+        if (originalFilename != null
+                && originalFilename.lastIndexOf(".") >= 0) {
+            extension = originalFilename.substring(
+                    originalFilename.lastIndexOf(".")
+            );
+        }
+
+        String key = UUID.randomUUID() + extension;
+
         try {
-            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+            PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(key)
-                    .acl("public-read")
                     .contentType(file.getContentType())
                     .build();
-            PutObjectResponse response = s3Client.putObject(putObjectRequest, RequestBody.fromBytes(file.getBytes()));
 
-            if (response.sdkHttpResponse().isSuccessful()) {
-                return "https://"+bucketName+".s3.amazonaws.com/"+key;
-            } else {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while uploading the file");
-            }
+            s3Client.putObject(
+                    request,
+                    RequestBody.fromBytes(file.getBytes())
+            );
 
-        }catch (IOException e){
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while uploading the file");
+            return "https://" + bucketName
+                    + ".s3." + region
+                    + ".amazonaws.com/" + key;
+
+        } catch (IOException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to read uploaded file",
+                    e
+            );
         }
     }
 
     @Override
     public boolean deleteFile(String imgUrl) {
-        String filename = imgUrl.substring(imgUrl.lastIndexOf("/")+1);
-        DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+        String key = imgUrl.substring(imgUrl.lastIndexOf("/") + 1);
+
+        DeleteObjectRequest request = DeleteObjectRequest.builder()
                 .bucket(bucketName)
-                .key(filename)
+                .key(key)
                 .build();
-        s3Client.deleteObject(deleteObjectRequest);
+
+        s3Client.deleteObject(request);
         return true;
     }
 }

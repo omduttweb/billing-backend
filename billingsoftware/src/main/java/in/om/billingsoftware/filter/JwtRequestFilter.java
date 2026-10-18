@@ -37,6 +37,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             if (!jwt.isEmpty() && jwt.split("\\.").length == 3) {
                 try {
                     email = jwtUtil.extractUsername(jwt);
+                    System.out.println("🔍 Extracted Email from JWT: " + email);
                 } catch (Exception e) {
                     System.out.println("⚠️ Invalid JWT token: " + e.getMessage());
                 }
@@ -48,14 +49,24 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
 
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-            if (jwtUtil.validateToken(jwt, userDetails)) {
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            try {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                System.out.println("👤 Loaded UserDetails: " + userDetails.getUsername() + " | Authorities: " + userDetails.getAuthorities());
+
+                if (jwtUtil.validateToken(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                    System.out.println("✅ SecurityContext successfully populated with authentication!");
+                } else {
+                    System.out.println("❌ jwtUtil.validateToken returned FALSE for user: " + email);
+                }
+            } catch (Exception e) {
+                System.out.println("❌ Error loading user or setting authentication: " + e.getMessage());
             }
         }
-        filterChain.doFilter(request,response);
+
+        filterChain.doFilter(request, response);
     }
 }

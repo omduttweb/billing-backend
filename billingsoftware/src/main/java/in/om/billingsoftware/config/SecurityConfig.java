@@ -35,9 +35,10 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/login", "/encode").permitAll()
-                        .requestMatchers("/categories", "/items", "/orders", "/payments", "/dashboard").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/v1.0/login", "/api/v1.0/encode").permitAll()
+                        .requestMatchers("/api/v1.0/categories", "/api/v1.0/items", "/api/v1.0/orders", "/api/v1.0/payments", "/api/v1.0/dashboard").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/v1.0/admin/**").hasRole("ADMIN") // <--- Must include /api/v1.0 prefix here!
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
